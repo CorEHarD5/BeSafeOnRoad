@@ -55,9 +55,6 @@ def convert_to_bytes(file_or_bytes, resize=None):
         del img
         return bio.getvalue()
 
-SYMBOL_UP =    '▲'
-SYMBOL_DOWN =  '▼'
-
 
 def collapse(layout, key):
     """
@@ -105,23 +102,15 @@ section2 = [[sg.Text('Video', size=(8, 1)), sg.Input(), sg.FileBrowse()],
             #  sg.B('Button3 section 2', button_color=('yellow', 'purple'))]]
 
 
-layout =   [[sg.Text('Choose between image or video')],
-            [sg.Checkbox(' Hide image', enable_events=True, key='-OPEN SEC1-CHECKBOX'), sg.Checkbox(' Hide video', enable_events=True, key='-OPEN SEC2-CHECKBOX')],
-            #### Section 1 part ####
-            [sg.T(SYMBOL_DOWN, enable_events=True, k='-OPEN SEC1-', text_color='yellow'), sg.T('Image', enable_events=True, text_color='yellow', k='-OPEN SEC1-TEXT')],
-            [collapse(section1, '-SEC1-')],
-            #### Section 2 part ####
-            [sg.T(SYMBOL_DOWN, enable_events=True, k='-OPEN SEC2-', text_color='purple'),
-             sg.T('Video', enable_events=True, text_color='purple', k='-OPEN SEC2-TEXT')],
-            [collapse(section2, '-SEC2-')],
-            #### Section 3 part ####
-    
-            #### Buttons at bottom ####
-            [sg.Button('Exit')]]
+layout = [[sg.Text('Choose between image or video')],
+          [sg.Radio(' Image', 'Radio', default=True, enable_events=True, key='-TOGGLE SEC1-RADIO'),
+           sg.Radio(' Video', 'Radio', enable_events=True, key='-TOGGLE SEC2-RADIO')],
+          [sg.Column(section1, key='-SEC1-'), sg.Column(section2, key='-SEC2-', visible=False)],
+          [sg.Button('Exit')], ]
 
 window = sg.Window('BeSafeOnRoad', layout)
 
-opened1, opened2 = True, True
+toggle_section = True
 
 while True:             # Event Loop
     event, values = window.read()
@@ -158,16 +147,13 @@ while True:             # Event Loop
         createROI(path)
         pass
 
-    if event.startswith('-OPEN SEC1-'):
-        opened1 = not opened1
-        window['-OPEN SEC1-'].update(SYMBOL_DOWN if opened1 else SYMBOL_UP)
-        window['-OPEN SEC1-CHECKBOX'].update(not opened1)
-        window['-SEC1-'].update(visible=opened1)
+    if event.startswith('-TOGGLE SEC'):
+        toggle_section = not toggle_section
 
-    if event.startswith('-OPEN SEC2-'):
-        opened2 = not opened2
-        window['-OPEN SEC2-'].update(SYMBOL_DOWN if opened2 else SYMBOL_UP)
-        window['-OPEN SEC2-CHECKBOX'].update(not opened2)
-        window['-SEC2-'].update(visible=opened2)
+        window['-TOGGLE SEC1-RADIO'].update(toggle_section)
+        window['-TOGGLE SEC2-RADIO'].update(not toggle_section)
+
+        window['-SEC1-'].update(visible=toggle_section)
+        window['-SEC2-'].update(visible=(not toggle_section))
 
 window.close()

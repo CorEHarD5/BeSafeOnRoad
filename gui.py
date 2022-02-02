@@ -55,10 +55,6 @@ def convert_to_bytes(file_or_bytes, resize=None):
         del img
         return bio.getvalue()
 
-SYMBOL_UP = '▲'
-SYMBOL_DOWN = '▼'
-
-
 def collapse(layout, key):
     """
     Helper function that creates a Column that can be later made hidden, thus appearing "collapsed"
@@ -77,20 +73,9 @@ section1 = [[sg.Text('Image', text_color='yellow', size=(8, 1)), sg.Input(), sg.
             [sg.Button('Run')]]
 
 
-# Coger el image name {values[0]}
-# [sg.Input('Input sec 1', key='-IN1-')],
-# [sg.Input(key='-IN11-')],
-# [sg.Button('Button section 1',  button_color='yellow on green'),
-#  sg.Button('Button2 section 1', button_color='yellow on green'),
-#  sg.Button('Button3 section 1', button_color='yellow on green')]]
 
 section2 = [[sg.Text('Video', text_color='purple', size=(8, 1)), sg.Input(), sg.FileBrowse()],
             [sg.Button('Run')]]
-# [sg.I('Input sec 2', k='-IN2-')],
-# [sg.I(k='-IN21-')],
-# [sg.B('Button section 2',  button_color=('yellow', 'purple')),
-#  sg.B('Button2 section 2', button_color=('yellow', 'purple')),
-#  sg.B('Button3 section 2', button_color=('yellow', 'purple'))]]
 
 
 layout = [[sg.Text('Choose between image or video')],
