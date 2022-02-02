@@ -4,6 +4,8 @@ import os.path
 import PIL.Image
 import io
 import base64
+import numpy as np
+import cv2
 from roi import *
 from roivideo import *
 
@@ -67,6 +69,32 @@ def collapse(layout, key):
     """
     return sg.pin(sg.Column(layout, key=key))
 
+def check_overlap(roi):
+    # if len(rois) < 2:
+    #     print('Error: Not enough rois to check overlaping')
+    #     return
+
+    img = cv2.imread(filename)
+    img = imutils.resize(img, width=500)
+
+    dst = np.zeros((len(img),len(img[1])),dtype=np.int8)
+    src1 = dst.copy()
+    src2 = dst.copy()
+
+    src1[:len(img)//2,:] = 1 # ToDo aquí se seleccionaría la roi con la bounding box del peatón
+
+    mask = np.zeros(img.shape, np.uint8)
+    points = np.array(roi, np.int32).reshape((-1, 1, 2))
+    mask = cv2.polylines(mask, [points], True, (255, 255, 255), 2)
+    mask2 = cv2.fillPoly (mask.copy (), [points], (255, 255, 255)) # utilizado para encontrar el ROI
+    src2 = [[1 if pixel[0] == 255 else 0 for pixel in line] for line in mask2]
+
+    overlap = src1 + src2 #sum of both *element-wise*
+    overlap_list = [pixel for line in overlap for pixel in line]
+    n_of_doeses = list.count(overlap_list, 2)
+    print(n_of_doeses)
+
+
 file_list_column = [[sg.Text('Folder'), sg.In(size=(25,1), enable_events=True ,key='-FOLDER-'), sg.FolderBrowse()],
             [sg.Listbox(values=[], enable_events=True, size=(40,20),key='-FILE LIST-')],
             [sg.Text('Resize to'), sg.In(key='-W-', size=(5,1)), sg.In(key='-H-', size=(5,1))]]
@@ -77,6 +105,7 @@ image_viewer_column = [
     [sg.Text(size=(40, 1), key="-TOUT-")],
     [sg.Image(key="-IMAGE-")],
     [sg.Button('Run Image')],
+    [sg.Button('Check overlap')],
 ]
 
 section1 = [
@@ -85,7 +114,7 @@ section1 = [
              sg.Column(image_viewer_column),
              ]
             ]
-           
+
 
 # Coger el image name {values[0]}
             # [sg.Input('Input sec 1', key='-IN1-')],
@@ -161,8 +190,7 @@ while True:             # Event Loop
         print("Button clicked")
         img = values['-FILE LIST-']
         path = values['-FOLDER-'] + '/' + str(img[0])
-        createROI(path)
-        pass # TODO:IA
+        roi = createROI(path)
 
     if event == '-VIDEO FOLDER-':                         # Folder name was filled in, make a list of files in the folder
         folder = values['-VIDEO FOLDER-']
@@ -188,8 +216,9 @@ while True:             # Event Loop
         path = values['-VIDEO FOLDER-'] + '/' + str(img[0])
         print(path)
         videoPlay(path)
-        pass # TODO:IA
-   
+
+    if event == 'Check overlap':
+        check_overlap(roi)
 
     if event.startswith('-TOGGLE SEC'):
         toggle_section = not toggle_section
