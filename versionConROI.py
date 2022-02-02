@@ -5,6 +5,7 @@ import PIL.Image
 import io
 import base64
 from roi import *
+from roivideo import *
 
 """
     Demo - "Collapsible" sections of windows
@@ -93,8 +94,24 @@ section1 = [
             #  sg.Button('Button2 section 1', button_color='yellow on green'),
             #  sg.Button('Button3 section 1', button_color='yellow on green')]]
 
-section2 = [[sg.Text('Video', size=(8, 1)), sg.Input(), sg.FileBrowse()],
-            [sg.Button('Run')]]
+
+file_list_column_video = [[sg.Text('Folder'), sg.In(size=(25,1), enable_events=True ,key='-VIDEO FOLDER-'), sg.FolderBrowse()],
+            [sg.Listbox(values=[], enable_events=True, size=(40,20),key='-FILE VIDEO LIST-')]]
+
+
+video_viewer_column = [
+    [sg.Text("Choose an video from list on left:")],
+    [sg.Text(size=(40, 1), key="-VIDEO TOUT-")],
+    [sg.Image(key="-VIDEO-")],
+    [sg.Button('Run Video')],
+]
+
+section2 = [
+            [sg.Column(file_list_column_video),
+             sg.VSeperator(),
+             sg.Column(video_viewer_column),
+             ]
+            ]
             # [sg.I('Input sec 2', k='-IN2-')],
             # [sg.I(k='-IN21-')],
             # [sg.B('Button section 2',  button_color=('yellow', 'purple')),
@@ -145,7 +162,34 @@ while True:             # Event Loop
         img = values['-FILE LIST-']
         path = values['-FOLDER-'] + '/' + str(img[0])
         createROI(path)
-        pass
+        pass # TODO:IA
+
+    if event == '-VIDEO FOLDER-':                         # Folder name was filled in, make a list of files in the folder
+        folder = values['-VIDEO FOLDER-']
+        try:
+            file_list = os.listdir(folder)         # get list of files in folder
+        except:
+            file_list = []
+        fnames = [f for f in file_list if os.path.isfile(
+            os.path.join(folder, f)) and f.lower().endswith((".avi", ".mp4", ".mkv"))]
+        window['-FILE VIDEO LIST-'].update(fnames)
+    elif event == '-FILE VIDEO LIST-':    # A file was chosen from the listbox
+        try:
+            filename = os.path.join(values['-VIDEO FOLDER-'], values['-FILE VIDEO LIST-'][0])
+            window['-VIDEO TOUT-'].update(filename)
+            window['-VIDEO-'].update(data=convert_to_bytes(filename, resize=new_size))
+        except Exception as E:
+            print(f'** Error {E} **')
+            pass        # something weird happened making the full filename
+
+    if event == 'Run Video':
+        print("Button clicked")
+        img = values['-FILE VIDEO LIST-']
+        path = values['-VIDEO FOLDER-'] + '/' + str(img[0])
+        print(path)
+        videoPlay(path)
+        pass # TODO:IA
+   
 
     if event.startswith('-TOGGLE SEC'):
         toggle_section = not toggle_section
