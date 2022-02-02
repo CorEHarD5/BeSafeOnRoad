@@ -55,8 +55,8 @@ def convert_to_bytes(file_or_bytes, resize=None):
         del img
         return bio.getvalue()
 
-SYMBOL_UP =    '▲'
-SYMBOL_DOWN =  '▼'
+SYMBOL_UP = '▲'
+SYMBOL_DOWN = '▼'
 
 
 def collapse(layout, key):
@@ -73,55 +73,35 @@ file_list_column = [[sg.Text('Folder'), sg.In(size=(25,1), enable_events=True ,k
             [sg.Listbox(values=[], enable_events=True, size=(40,20),key='-FILE LIST-')],
             [sg.Text('Resize to'), sg.In(key='-W-', size=(5,1)), sg.In(key='-H-', size=(5,1))]]
 
+section1 = [[sg.Text('Image', text_color='yellow', size=(8, 1)), sg.Input(), sg.FileBrowse()],
+            [sg.Button('Run')]]
 
-image_viewer_column = [
-    [sg.Text("Choose an image from list on left:")],
-    [sg.Text(size=(40, 1), key="-TOUT-")],
-    [sg.Image(key="-IMAGE-")],
-    [sg.Button('Run Image')],
-]
-
-section1 = [
-            [sg.Column(file_list_column),
-             sg.VSeperator(),
-             sg.Column(image_viewer_column),
-             ]
-            ]
-           
 
 # Coger el image name {values[0]}
-            # [sg.Input('Input sec 1', key='-IN1-')],
-            # [sg.Input(key='-IN11-')],
-            # [sg.Button('Button section 1',  button_color='yellow on green'),
-            #  sg.Button('Button2 section 1', button_color='yellow on green'),
-            #  sg.Button('Button3 section 1', button_color='yellow on green')]]
+# [sg.Input('Input sec 1', key='-IN1-')],
+# [sg.Input(key='-IN11-')],
+# [sg.Button('Button section 1',  button_color='yellow on green'),
+#  sg.Button('Button2 section 1', button_color='yellow on green'),
+#  sg.Button('Button3 section 1', button_color='yellow on green')]]
 
-section2 = [[sg.Text('Video', size=(8, 1)), sg.Input(), sg.FileBrowse()],
+section2 = [[sg.Text('Video', text_color='purple', size=(8, 1)), sg.Input(), sg.FileBrowse()],
             [sg.Button('Run')]]
-            # [sg.I('Input sec 2', k='-IN2-')],
-            # [sg.I(k='-IN21-')],
-            # [sg.B('Button section 2',  button_color=('yellow', 'purple')),
-            #  sg.B('Button2 section 2', button_color=('yellow', 'purple')),
-            #  sg.B('Button3 section 2', button_color=('yellow', 'purple'))]]
+# [sg.I('Input sec 2', k='-IN2-')],
+# [sg.I(k='-IN21-')],
+# [sg.B('Button section 2',  button_color=('yellow', 'purple')),
+#  sg.B('Button2 section 2', button_color=('yellow', 'purple')),
+#  sg.B('Button3 section 2', button_color=('yellow', 'purple'))]]
 
 
-layout =   [[sg.Text('Choose between image or video')],
-            [sg.Checkbox(' Hide image', enable_events=True, key='-OPEN SEC1-CHECKBOX'), sg.Checkbox(' Hide video', enable_events=True, key='-OPEN SEC2-CHECKBOX')],
-            #### Section 1 part ####
-            [sg.T(SYMBOL_DOWN, enable_events=True, k='-OPEN SEC1-', text_color='yellow'), sg.T('Image', enable_events=True, text_color='yellow', k='-OPEN SEC1-TEXT')],
-            [collapse(section1, '-SEC1-')],
-            #### Section 2 part ####
-            [sg.T(SYMBOL_DOWN, enable_events=True, k='-OPEN SEC2-', text_color='purple'),
-             sg.T('Video', enable_events=True, text_color='purple', k='-OPEN SEC2-TEXT')],
-            [collapse(section2, '-SEC2-')],
-            #### Section 3 part ####
-    
-            #### Buttons at bottom ####
-            [sg.Button('Exit')]]
+layout = [[sg.Text('Choose between image or video')],
+          [sg.Radio(' Image', 'Radio', default=True, enable_events=True, key='-TOGGLE SEC1-RADIO'),
+           sg.Radio(' Video', 'Radio', enable_events=True, key='-TOGGLE SEC2-RADIO')],
+          [sg.Column(section1, key='-SEC1-'), sg.Column(section2, key='-SEC2-', visible=False)],
+          [sg.Button('Exit')], ]
 
 window = sg.Window('BeSafeOnRoad', layout)
 
-opened1, opened2 = True, True
+toggle_section = True
 
 while True:             # Event Loop
     event, values = window.read()
@@ -129,45 +109,13 @@ while True:             # Event Loop
     if event == sg.WIN_CLOSED or event == 'Exit':
         break
 
-    if event == '-FOLDER-':                         # Folder name was filled in, make a list of files in the folder
-        folder = values['-FOLDER-']
-        try:
-            file_list = os.listdir(folder)         # get list of files in folder
-        except:
-            file_list = []
-        fnames = [f for f in file_list if os.path.isfile(
-            os.path.join(folder, f)) and f.lower().endswith((".png", ".jpg", "jpeg", ".tiff", ".bmp"))]
-        window['-FILE LIST-'].update(fnames)
-    elif event == '-FILE LIST-':    # A file was chosen from the listbox
-        try:
-            filename = os.path.join(values['-FOLDER-'], values['-FILE LIST-'][0])
-            window['-TOUT-'].update(filename)
-            if values['-W-'] and values['-H-']:
-                new_size = int(values['-W-']), int(values['-H-'])
-            else:
-                new_size = None
-            window['-IMAGE-'].update(data=convert_to_bytes(filename, resize=new_size))
-        except Exception as E:
-            print(f'** Error {E} **')
-            pass        # something weird happened making the full filename
+    if event.startswith('-TOGGLE SEC'):
+        toggle_section = not toggle_section
 
-    if event == 'Run Image':
-        print("Button clicked")
-        img = values['-FILE LIST-']
-        path = values['-FOLDER-'] + '/' + str(img[0])
-        createROI(path)
-        pass
+        window['-TOGGLE SEC1-RADIO'].update(toggle_section)
+        window['-TOGGLE SEC2-RADIO'].update(not toggle_section)
 
-    if event.startswith('-OPEN SEC1-'):
-        opened1 = not opened1
-        window['-OPEN SEC1-'].update(SYMBOL_DOWN if opened1 else SYMBOL_UP)
-        window['-OPEN SEC1-CHECKBOX'].update(not opened1)
-        window['-SEC1-'].update(visible=opened1)
-
-    if event.startswith('-OPEN SEC2-'):
-        opened2 = not opened2
-        window['-OPEN SEC2-'].update(SYMBOL_DOWN if opened2 else SYMBOL_UP)
-        window['-OPEN SEC2-CHECKBOX'].update(not opened2)
-        window['-SEC2-'].update(visible=opened2)
+        window['-SEC1-'].update(visible=toggle_section)
+        window['-SEC2-'].update(visible=(not toggle_section))
 
 window.close()
