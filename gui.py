@@ -36,7 +36,7 @@ def collapse(layout, key):
     return sg.pin(sg.Column(layout, key=key))
 
 
-section1 = [[sg.Text('Imagen', size=(8, 1)), sg.Input(), sg.FileBrowse()],
+section1 = [[sg.Text('Image', size=(8, 1)), sg.Input(), sg.FileBrowse()],
             [sg.Button('Run')]]
            
 
@@ -56,10 +56,10 @@ section2 = [[sg.Text('Video', size=(8, 1)), sg.Input(), sg.FileBrowse()],
             #  sg.B('Button3 section 2', button_color=('yellow', 'purple'))]]
 
 
-layout =   [[sg.Text('Escoge entre imagen o video')],
-            [sg.Checkbox(' Oculta imagen', enable_events=True, key='-OPEN SEC1-CHECKBOX'), sg.Checkbox(' Oculta video', enable_events=True, key='-OPEN SEC2-CHECKBOX')],
+layout =   [[sg.Text('Choose between image or video')],
+            [sg.Checkbox(' Hide image', enable_events=True, key='-OPEN SEC1-CHECKBOX'), sg.Checkbox(' Hide video', enable_events=True, key='-OPEN SEC2-CHECKBOX')],
             #### Section 1 part ####
-            [sg.T(SYMBOL_DOWN, enable_events=True, k='-OPEN SEC1-', text_color='yellow'), sg.T('Imagen', enable_events=True, text_color='yellow', k='-OPEN SEC1-TEXT')],
+            [sg.T(SYMBOL_DOWN, enable_events=True, k='-OPEN SEC1-', text_color='yellow'), sg.T('Image', enable_events=True, text_color='yellow', k='-OPEN SEC1-TEXT')],
             [collapse(section1, '-SEC1-')],
             #### Section 2 part ####
             [sg.T(SYMBOL_DOWN, enable_events=True, k='-OPEN SEC2-', text_color='purple'),
