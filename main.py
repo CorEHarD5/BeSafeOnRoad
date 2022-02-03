@@ -100,7 +100,7 @@ def check_overlap(roi, img_path):
     n_of_doeses = list.count(overlap_list, 2)
     print(n_of_doeses)
 
-def check_light_color(roi_pts_tf, img_path):
+def check_light_red(roi_pts_tf, img_path):
     print(roi_pts_tf, img_path)
 
     tf_image = cv2.imread(img_path)
@@ -110,33 +110,29 @@ def check_light_color(roi_pts_tf, img_path):
 
     pt1 = (min(roi_t[0]), min(roi_t[1]))
     pt2 = (max(roi_t[0]), max(roi_t[1]))
-    #tf_image = cv2.flip(tf_image,1)
     roi_tf = tf_image[pt1[1]:pt2[1],pt1[0]:pt2[0],:].copy()
-    
-    redBajo1 = np.array([0, 100, 20], np.uint8)
-    redAlto1 = np.array([8, 255, 255], np.uint8)
-    redBajo2=np.array([175, 100, 20], np.uint8)
-    redAlto2=np.array([179, 255, 255], np.uint8)
 
-    frameHSV = cv2.cvtColor(roi_tf, cv2.COLOR_BGR2HSV)
-    maskRed1 = cv2.inRange(frameHSV, redBajo1, redAlto1)
-    maskRed2 = cv2.inRange(frameHSV, redBajo2, redAlto2)
-    maskRed = cv2.add(maskRed1, maskRed2)
-    maskRedvis = cv2.bitwise_and(roi_tf, roi_tf, mask= maskRed)        
-    cv2.imshow('frame', roi_tf)
-    cv2.imshow('maskRed', maskRed)#this
-    cv2.imshow('maskRedvis', maskRedvis)
+    red_bajo_1 = np.array([0, 100, 20], np.uint8)
+    red_alto_1 = np.array([8, 255, 255], np.uint8)
+    red_bajo_2=np.array([175, 100, 20], np.uint8)
+    red_alto_2=np.array([179, 255, 255], np.uint8)
 
-    print(maskRed)
-    list_of_whites = [pixel for line in maskRed for pixel in line]
+    frame_hsv = cv2.cvtColor(roi_tf, cv2.COLOR_BGR2HSV)
+    mask_red_1 = cv2.inRange(frame_hsv, red_bajo_1, red_alto_1)
+    mask_red_2 = cv2.inRange(frame_hsv, red_bajo_2, red_alto_2)
+    mask_red = cv2.add(mask_red_1, mask_red_2)
+    # mask_red_vis = cv2.bitwise_and(roi_tf, roi_tf, mask= mask_red)
+    # cv2.imshow('frame', roi_tf)
+    # cv2.imshow('maskRed', mask_red)
+    # cv2.imshow('maskRedvis', mask_red_vis)
+
+    list_of_whites = [pixel for line in mask_red for pixel in line]
     n_of_whites = list.count(list_of_whites, 255)
     percentage = (n_of_whites / roi_tf.size) * 100
-    cv2.destroyAllWindows()
-    result = False
-    if percentage >= 20.0:
-        result = True
-    return result
-    
+    # cv2.destroyAllWindows()
+
+    return percentage >= 10.0
+
 
 def main():
     file_list_column = [
@@ -153,8 +149,8 @@ def main():
         ],
         [
             sg.Text('Resize to'),
-            sg.In(key='-W-', size=(5, 1)),
-            sg.In(key='-H-', size=(5, 1))
+            sg.In(default_text=500, key='-W-', size=(5, 1)),
+            sg.In(default_text=500, key='-H-', size=(5, 1))
         ],
     ]
 
@@ -276,7 +272,7 @@ def main():
             check_overlap(roi, img_path)
 
         if event == 'Check Light Color':
-            is_red = check_light_color(roi_tf, img_path)
+            is_red = check_light_red(roi_tf, img_path)
             print(is_red)
 
         # Folder name was filled in, make a list of files in the folder
