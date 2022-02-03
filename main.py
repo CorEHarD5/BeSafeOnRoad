@@ -112,7 +112,7 @@ def check_light_color(roi_pts_tf, img_path):
     pt2 = (max(roi_t[0]), max(roi_t[1]))
     #tf_image = cv2.flip(tf_image,1)
     roi_tf = tf_image[pt1[1]:pt2[1],pt1[0]:pt2[0],:].copy()
-    
+
     redBajo1 = np.array([0, 100, 20], np.uint8)
     redAlto1 = np.array([8, 255, 255], np.uint8)
     redBajo2=np.array([175, 100, 20], np.uint8)
@@ -122,7 +122,7 @@ def check_light_color(roi_pts_tf, img_path):
     maskRed1 = cv2.inRange(frameHSV, redBajo1, redAlto1)
     maskRed2 = cv2.inRange(frameHSV, redBajo2, redAlto2)
     maskRed = cv2.add(maskRed1, maskRed2)
-    maskRedvis = cv2.bitwise_and(roi_tf, roi_tf, mask= maskRed)        
+    maskRedvis = cv2.bitwise_and(roi_tf, roi_tf, mask= maskRed)
     cv2.imshow('frame', roi_tf)
     cv2.imshow('maskRed', maskRed)#this
     cv2.imshow('maskRedvis', maskRedvis)
@@ -136,7 +136,7 @@ def check_light_color(roi_pts_tf, img_path):
     if percentage >= 20.0:
         result = True
     return result
-    
+
 
 def main():
     file_list_column = [
@@ -153,8 +153,8 @@ def main():
         ],
         [
             sg.Text('Resize to'),
-            sg.In(key='-W-', size=(5, 1)),
-            sg.In(key='-H-', size=(5, 1))
+            sg.In(default_text=500, key='-W-', size=(5, 1)),
+            sg.In(default_text=500, key='-H-', size=(5, 1))
         ],
     ]
 
