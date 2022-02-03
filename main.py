@@ -27,7 +27,7 @@ import PySimpleGUI as sg
 
 from roi import *
 from roivideo import *
-
+from trafficLight import *
 
 def convert_to_bytes(file_or_bytes, resize=None):
     '''
@@ -100,6 +100,43 @@ def check_overlap(roi, img_path):
     n_of_doeses = list.count(overlap_list, 2)
     print(n_of_doeses)
 
+def check_light_color(roi_pts_tf, img_path):
+    print(roi_pts_tf, img_path)
+
+    tf_image = cv2.imread(img_path)
+    tf_image = imutils.resize(tf_image, width=500)
+
+    roi_t = list(zip(*roi_pts_tf))
+
+    pt1 = (min(roi_t[0]), min(roi_t[1]))
+    pt2 = (max(roi_t[0]), max(roi_t[1]))
+    #tf_image = cv2.flip(tf_image,1)
+    roi_tf = tf_image[pt1[1]:pt2[1],pt1[0]:pt2[0],:].copy()
+    
+    redBajo1 = np.array([0, 100, 20], np.uint8)
+    redAlto1 = np.array([8, 255, 255], np.uint8)
+    redBajo2=np.array([175, 100, 20], np.uint8)
+    redAlto2=np.array([179, 255, 255], np.uint8)
+
+    frameHSV = cv2.cvtColor(roi_tf, cv2.COLOR_BGR2HSV)
+    maskRed1 = cv2.inRange(frameHSV, redBajo1, redAlto1)
+    maskRed2 = cv2.inRange(frameHSV, redBajo2, redAlto2)
+    maskRed = cv2.add(maskRed1, maskRed2)
+    maskRedvis = cv2.bitwise_and(roi_tf, roi_tf, mask= maskRed)        
+    cv2.imshow('frame', roi_tf)
+    cv2.imshow('maskRed', maskRed)#this
+    cv2.imshow('maskRedvis', maskRedvis)
+
+    print(maskRed)
+    list_of_whites = [pixel for line in maskRed for pixel in line]
+    n_of_whites = list.count(list_of_whites, 255)
+    percentage = (n_of_whites / roi_tf.size) * 100
+    cv2.destroyAllWindows()
+    result = False
+    if percentage >= 20.0:
+        result = True
+    return result
+    
 
 def main():
     file_list_column = [
@@ -127,6 +164,8 @@ def main():
         [sg.Image(key="-IMAGE-")],
         [sg.Button('Run Image')],
         [sg.Button('Check overlap')],
+        [sg.Button('Traffic Light')],
+        [sg.Button('Check Light Color')],
     ]
 
     section1 = [[
@@ -227,6 +266,19 @@ def main():
             path = values['-FOLDER-'] + '/' + str(img[0])
             roi = createROI(path)
 
+        if event == 'Traffic Light':
+            print("Button clicked")
+            img = values['-FILE LIST-']
+            path = values['-FOLDER-'] + '/' + str(img[0])
+            roi_tf = createROI_tf(path)
+
+        if event == 'Check overlap':
+            check_overlap(roi, img_path)
+
+        if event == 'Check Light Color':
+            is_red = check_light_color(roi_tf, img_path)
+            print(is_red)
+
         # Folder name was filled in, make a list of files in the folder
         if event == '-VIDEO FOLDER-':
             folder = values['-VIDEO FOLDER-']
@@ -256,9 +308,6 @@ def main():
             path = values['-VIDEO FOLDER-'] + '/' + str(img[0])
             print(path)
             videoPlay(path)
-
-        if event == 'Check overlap':
-            check_overlap(roi, img_path)
 
         if event.startswith('-TOGGLE SEC'):
             toggle_section = not toggle_section
