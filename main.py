@@ -20,14 +20,17 @@ import io
 import os.path
 
 import cv2
+import imutils
 import numpy as np
 import PIL.Image
 import PySimpleGUI as sg
 # import PySimpleGUIQt as sg
 
+from IA import *
 from roi import *
 from roivideo import *
 from trafficLight import *
+
 
 def convert_to_bytes(file_or_bytes, resize=None):
     '''
@@ -63,59 +66,53 @@ def convert_to_bytes(file_or_bytes, resize=None):
         return bio.getvalue()
 
 
-def collapse(layout, key):
-    """
-    Helper function that creates a Column that can be later made hidden, thus appearing "collapsed"
-    :param layout: The layout for the section
-    :param key: Key used to make this seciton visible / invisible
-    :return: A pinned column that can be placed directly into your layout
-    :rtype: sg.pin
-    """
-    return sg.pin(sg.Column(layout, key=key))
-
-
-def check_overlap(roi, img_path):
-    # if len(rois) < 2:
-    #     print('Error: Not enough rois to check overlaping')
-    #     return
-
+def check_overlap(roi_cw, pedestrian_boxes, img_path):
     img = cv2.imread(img_path)
-    img = imutils.resize(img, width=500)
-
+    # img = imutils.resize(img, width=500)
+    img = format_yolov5(img)
     dst = np.zeros((len(img), len(img[1])), dtype=np.int8)
-    src1 = dst.copy()
-    src2 = dst.copy()
 
-    # ToDo aquí se seleccionaría la roi con la bounding box del peatón
-    src1[:len(img) // 2, :] = 1
+    for pedestian_box in pedestrian_boxes:
+        src1 = dst.copy()
+        src2 = dst.copy()
 
-    mask = np.zeros(img.shape, np.uint8)
-    points = np.array(roi, np.int32).reshape((-1, 1, 2))
-    mask = cv2.polylines(mask, [points], True, (255, 255, 255), 2)
-    mask2 = cv2.fillPoly(mask.copy(), [points], (255, 255, 255))
-    src2 = [[1 if pixel[0] == 255 else 0 for pixel in line] for line in mask2]
+        src1[pedestian_box[1]:pedestian_box[1]+pedestian_box[3],
+             pedestian_box[0]:pedestian_box[0]+pedestian_box[2]] = 1
 
-    overlap = src1 + src2  #sum of both *element-wise*
-    overlap_list = [pixel for line in overlap for pixel in line]
-    n_of_doeses = list.count(overlap_list, 2)
-    print(n_of_doeses)
+        mask = np.zeros(img.shape, np.uint8)
+        points = np.array(roi_cw, np.int32).reshape((-1, 1, 2))
+        mask = cv2.polylines(mask, [points], True, (255, 255, 255), 2)
+        mask2 = cv2.fillPoly(mask.copy(), [points], (255, 255, 255))
+        src2 = np.array([[1 if pixel[0] == 255 else 0 for pixel in line]
+                         for line in mask2])
+
+        overlap = src1 + src2  # sum of both *element-wise*
+        overlap_list = [pixel for line in overlap for pixel in line]
+        overlap_area = list.count(overlap_list, 2)
+
+        pedestian_box_area = pedestian_box[2] * pedestian_box[3]
+        if overlap_area > pedestian_box_area*0.2:
+            return True
+
+    return False
+
 
 def check_light_red(roi_pts_tf, img_path):
     print(roi_pts_tf, img_path)
 
     tf_image = cv2.imread(img_path)
-    tf_image = imutils.resize(tf_image, width=500)
-
+    # tf_image = imutils.resize(tf_image, width=500)
+    tf_image = format_yolov5(tf_image)
     roi_t = list(zip(*roi_pts_tf))
 
     pt1 = (min(roi_t[0]), min(roi_t[1]))
     pt2 = (max(roi_t[0]), max(roi_t[1]))
-    roi_tf = tf_image[pt1[1]:pt2[1],pt1[0]:pt2[0],:].copy()
+    roi_tf = tf_image[pt1[1]:pt2[1], pt1[0]:pt2[0], :].copy()
 
     red_bajo_1 = np.array([0, 100, 20], np.uint8)
     red_alto_1 = np.array([8, 255, 255], np.uint8)
-    red_bajo_2=np.array([175, 100, 20], np.uint8)
-    red_alto_2=np.array([179, 255, 255], np.uint8)
+    red_bajo_2 = np.array([175, 100, 20], np.uint8)
+    red_alto_2 = np.array([179, 255, 255], np.uint8)
 
     frame_hsv = cv2.cvtColor(roi_tf, cv2.COLOR_BGR2HSV)
     mask_red_1 = cv2.inRange(frame_hsv, red_bajo_1, red_alto_1)
@@ -149,8 +146,8 @@ def main():
         ],
         [
             sg.Text('Resize to'),
-            sg.In(default_text=500, key='-W-', size=(5, 1)),
-            sg.In(default_text=500, key='-H-', size=(5, 1))
+            sg.In(default_text=640, key='-W-', size=(5, 1)),
+            sg.In(default_text=640, key='-H-', size=(5, 1))
         ],
     ]
 
@@ -158,10 +155,15 @@ def main():
         [sg.Text("Choose an image from list on left:")],
         [sg.Text(size=(40, 1), key="-TOUT-")],
         [sg.Image(key="-IMAGE-")],
-        [sg.Button('Run Image')],
-        [sg.Button('Check overlap')],
-        [sg.Button('Traffic Light')],
-        [sg.Button('Check Light Color')],
+        [
+            sg.Button('Select Crosswalk'),
+            sg.Button('Select Traffic Light'),
+            sg.Button('Detect pedestrians'),
+        ],
+        [
+            sg.Button('Check Light Color'),
+            sg.Button('Check overlap'),
+        ],
     ]
 
     section1 = [[
@@ -220,7 +222,11 @@ def main():
     window = sg.Window('BeSafeOnRoad', layout)
 
     toggle_section = True
-    img_path = ""
+    img_path = None
+    roi_cw = None
+    roi_tf = None
+    pedestrian_boxes = None
+    is_red = None
 
     while True:  # Event Loop
         event, values = window.read()
@@ -256,24 +262,30 @@ def main():
                 print(f'** Error {err} **')
                 # something weird happened making the full filename
 
-        if event == 'Run Image':
+        if event == 'Select Crosswalk':
             print("Button clicked")
             img = values['-FILE LIST-']
             path = values['-FOLDER-'] + '/' + str(img[0])
-            roi = createROI(path)
+            roi_cw = createROI(path)
 
-        if event == 'Traffic Light':
+        if event == 'Select Traffic Light':
             print("Button clicked")
             img = values['-FILE LIST-']
             path = values['-FOLDER-'] + '/' + str(img[0])
             roi_tf = createROI_tf(path)
 
-        if event == 'Check overlap':
-            check_overlap(roi, img_path)
+        if event == 'Detect pedestrians':
+            pedestrian_boxes = detect_pedestrians(img_path)
+            print(pedestrian_boxes)
 
         if event == 'Check Light Color':
             is_red = check_light_red(roi_tf, img_path)
             print(is_red)
+
+        if event == 'Check overlap':
+            warn_pedenstrian = check_overlap(
+                roi_cw, pedestrian_boxes, img_path)
+            print(warn_pedenstrian)
 
         # Folder name was filled in, make a list of files in the folder
         if event == '-VIDEO FOLDER-':

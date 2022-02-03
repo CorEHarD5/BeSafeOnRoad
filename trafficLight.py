@@ -22,6 +22,8 @@ import imutils
 import numpy as np
 # import joblib
 
+from IA import format_yolov5
+
 pts = []  # para almacenar puntos
 
 
@@ -84,7 +86,8 @@ def createROI_tf(filename):
     # Crear imagen y ventana y vincular ventana a función de devolución de llamada
     pts = []
     img = cv2.imread(filename)
-    img = imutils.resize(img, width=500)
+    # img = imutils.resize(img, width=500)
+    img = format_yolov5(img)
     cv2.namedWindow('image')
     cv2.setMouseCallback('image', draw_roi_tf, (img, pts))
     print("[INFO] Clic izquierdo: seleccionar puntos, " +
