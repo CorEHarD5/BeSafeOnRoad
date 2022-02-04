@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
-File: versionConROI.py
+File: main.py
 Author:
     Sergio de la Barrera García <alu0100953275@ull.edu.es>
     Francisco Jesus Mendes Gomez <alu0101163970@ull.edu.es>
@@ -19,17 +19,14 @@ import base64
 import io
 import os.path
 
-import cv2
-import imutils
 import numpy as np
 import PIL.Image
 import PySimpleGUI as sg
-# import PySimpleGUIQt as sg
 
 from IA import *
 from roi import *
 from roivideo import *
-# from trafficLight import *
+from img_processor import *
 
 
 def convert_to_bytes(file_or_bytes, resize=None):
@@ -66,72 +63,10 @@ def convert_to_bytes(file_or_bytes, resize=None):
         return bio.getvalue()
 
 
-def check_overlap(roi_cw, pedestrian_boxes, img_path):
-    img = cv2.imread(img_path)
-    # img = imutils.resize(img, width=500)
-    img = format_yolov5(img)
-    dst = np.zeros((len(img), len(img[1])), dtype=np.int8)
-
-    for pedestian_box in pedestrian_boxes:
-        src1 = dst.copy()
-        src2 = dst.copy()
-
-        src1[pedestian_box[1]:pedestian_box[1]+pedestian_box[3],
-             pedestian_box[0]:pedestian_box[0]+pedestian_box[2]] = 1
-
-        mask = np.zeros(img.shape, np.uint8)
-        points = np.array(roi_cw, np.int32).reshape((-1, 1, 2))
-        mask = cv2.polylines(mask, [points], True, (255, 255, 255), 2)
-        mask2 = cv2.fillPoly(mask.copy(), [points], (255, 255, 255))
-        src2 = np.array([[1 if pixel[0] == 255 else 0 for pixel in line]
-                         for line in mask2])
-
-        overlap = src1 + src2  # sum of both *element-wise*
-        overlap_list = [pixel for line in overlap for pixel in line]
-        overlap_area = list.count(overlap_list, 2)
-
-        pedestian_box_area = pedestian_box[2] * pedestian_box[3]
-        if overlap_area > pedestian_box_area*0.2:
-            return True
-
-    return False
-
-
-def check_light_red(roi_pts_tf, img_path):
-    print(roi_pts_tf, img_path)
-
-    tf_image = cv2.imread(img_path)
-    # tf_image = imutils.resize(tf_image, width=500)
-    tf_image = format_yolov5(tf_image)
-    roi_t = list(zip(*roi_pts_tf))
-
-    pt1 = (min(roi_t[0]), min(roi_t[1]))
-    pt2 = (max(roi_t[0]), max(roi_t[1]))
-    roi_tf = tf_image[pt1[1]:pt2[1], pt1[0]:pt2[0], :].copy()
-
-    red_bajo_1 = np.array([0, 100, 20], np.uint8)
-    red_alto_1 = np.array([8, 255, 255], np.uint8)
-    red_bajo_2 = np.array([175, 100, 20], np.uint8)
-    red_alto_2 = np.array([179, 255, 255], np.uint8)
-
-    frame_hsv = cv2.cvtColor(roi_tf, cv2.COLOR_BGR2HSV)
-    mask_red_1 = cv2.inRange(frame_hsv, red_bajo_1, red_alto_1)
-    mask_red_2 = cv2.inRange(frame_hsv, red_bajo_2, red_alto_2)
-    mask_red = cv2.add(mask_red_1, mask_red_2)
-    # mask_red_vis = cv2.bitwise_and(roi_tf, roi_tf, mask= mask_red)
-    # cv2.imshow('frame', roi_tf)
-    # cv2.imshow('maskRed', mask_red)
-    # cv2.imshow('maskRedvis', mask_red_vis)
-
-    list_of_whites = [pixel for line in mask_red for pixel in line]
-    n_of_whites = list.count(list_of_whites, 255)
-    percentage = (n_of_whites / roi_tf.size) * 100
-    # cv2.destroyAllWindows()
-
-    return percentage >= 10.0
-
-
 def main():
+    toggle_section = True
+    img_path = None
+
     file_list_column = [
         [
             sg.Text('Folder'),
@@ -155,15 +90,7 @@ def main():
         [sg.Text("Choose an image from list on left:")],
         [sg.Text(size=(40, 1), key="-TOUT-")],
         [sg.Image(key="-IMAGE-")],
-        [
-            sg.Button('Select Crosswalk'),
-            sg.Button('Select Traffic Light'),
-            sg.Button('Detect pedestrians'),
-        ],
-        [
-            sg.Button('Check Light Color'),
-            sg.Button('Check overlap'),
-        ],
+        [sg.Button('Start Checking')],
     ]
 
     section1 = [[
@@ -221,13 +148,6 @@ def main():
 
     window = sg.Window('BeSafeOnRoad', layout)
 
-    toggle_section = True
-    img_path = None
-    roi_cw = None
-    roi_tf = None
-    pedestrian_boxes = None
-    is_red = None
-
     while True:  # Event Loop
         event, values = window.read()
         print(event, values)
@@ -246,6 +166,7 @@ def main():
                 if os.path.isfile(os.path.join(folder, f)) and
                 f.lower().endswith((".png", ".jpg", "jpeg", ".tiff", ".bmp"))
             ]
+            fnames.sort()
             window['-FILE LIST-'].update(fnames)
         elif event == '-FILE LIST-':  # A file was chosen from the listbox
             try:
@@ -262,29 +183,8 @@ def main():
                 print(f'** Error {err} **')
                 # something weird happened making the full filename
 
-        if event == 'Select Crosswalk':
-            print("Button clicked")
-            img = values['-FILE LIST-']
-            path = values['-FOLDER-'] + '/' + str(img[0])
-            roi_cw = create_roi(path, './temp/ROI_CW.json')
-
-        if event == 'Select Traffic Light':
-            print("Button clicked")
-            img = values['-FILE LIST-']
-            path = values['-FOLDER-'] + '/' + str(img[0])
-            roi_tf = create_roi(path, './temp/ROI_TF.json')
-
-        if event == 'Detect pedestrians':
-            pedestrian_boxes = detect_pedestrians(img_path)
-            print(pedestrian_boxes)
-
-        if event == 'Check Light Color':
-            is_red = check_light_red(roi_tf, img_path)
-            print(is_red)
-
-        if event == 'Check overlap':
-            warn_pedenstrian = check_overlap(
-                roi_cw, pedestrian_boxes, img_path)
+        if event == 'Start Checking':
+            warn_pedenstrian = process_image(img_path)
             print(warn_pedenstrian)
 
         # Folder name was filled in, make a list of files in the folder
@@ -313,9 +213,9 @@ def main():
         if event == 'Run Video':
             print("Button clicked")
             img = values['-FILE VIDEO LIST-']
-            path = values['-VIDEO FOLDER-'] + '/' + str(img[0])
-            print(path)
-            videoPlay(path)
+            video_path = values['-VIDEO FOLDER-'] + '/' + str(img[0])
+            print(video_path)
+            videoPlay(video_path)
 
         if event.startswith('-TOGGLE SEC'):
             toggle_section = not toggle_section

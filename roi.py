@@ -29,7 +29,7 @@ pts = []  # para almacenar puntos
 
 # Unificado: función de devolución de llamada del mouse
 def draw_roi(event, x, y, flags, params):
-    img, pts = params
+    img, pts, window_name = params
     img2 = img.copy()
 
     # Haga clic izquierdo para seleccionar el punto
@@ -79,17 +79,17 @@ def draw_roi(event, x, y, flags, params):
                      color=(255, 0, 0),
                      thickness=2)
 
-    cv2.imshow('image', img2)
+    cv2.imshow(window_name, img2)
 
 
-def create_roi(filename, export_filename):
+def create_roi(filename, export_filename, window_name='image'):
     # Crear imagen y ventana y vincular ventana a función de devolución de llamada
     pts = []
     img = cv2.imread(filename)
     # img = imutils.resize(img, width=500)
     img = format_yolov5(img)
-    cv2.namedWindow('image')
-    cv2.setMouseCallback('image', draw_roi, (img, pts))
+    cv2.namedWindow(window_name)
+    cv2.setMouseCallback(window_name, draw_roi, (img, pts, window_name))
     print("[INFO] Clic izquierdo: seleccionar puntos, " +
           "clic derecho: borrar el último punto seleccionado, " +
           "clic medio: confirmar área de ROI")
