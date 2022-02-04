@@ -1,13 +1,10 @@
 from operator import index
-import os.path
 
 import cv2
-import imutils
 import numpy as np
 
 
 def format_yolov5(frame):
-
     # put the image in square big enough
     row, col, _ = frame.shape
     _max = max(col, row)
@@ -82,13 +79,12 @@ def load_classes():
         class_list = [cname.strip() for cname in f.readlines()]
     return class_list
 
-def detect_pedestrians(img_path):
+def detect_pedestrians(input_img):
     net = cv2.dnn.readNet('yolov5s.onnx')
-    img = cv2.imread(img_path)
+    img = input_img.copy()
 
-    input_img = format_yolov5(img)
-    outs = detect(input_img, net)
-    class_ids, confidences, boxes = unwrap_detection(input_img, outs[0])
+    outs = detect(img, net)
+    class_ids, confidences, boxes = unwrap_detection(img, outs[0])
 
     class_list = load_classes()
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]

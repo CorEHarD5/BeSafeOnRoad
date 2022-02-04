@@ -185,7 +185,7 @@ def main():
 
         if event == 'Start Checking':
             warn_pedenstrian = process_image(img_path)
-            print(warn_pedenstrian)
+            print('warn_pedenstrian', warn_pedenstrian)
 
         # Folder name was filled in, make a list of files in the folder
         if event == '-VIDEO FOLDER-':

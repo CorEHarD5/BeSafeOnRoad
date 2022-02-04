@@ -18,9 +18,7 @@ Use case:
 import json
 
 import cv2
-import imutils
 import numpy as np
-# import joblib
 
 from IA import format_yolov5
 
@@ -78,16 +76,19 @@ def draw_roi(event, x, y, flags, params):
                      pt2=pts[i + 1],
                      color=(255, 0, 0),
                      thickness=2)
+        cv2.line(img=img2,
+                pt1=pts[-1],
+                pt2=pts[0],
+                color=(255, 0, 0),
+                thickness=2)
 
     cv2.imshow(window_name, img2)
 
 
-def create_roi(filename, export_filename, window_name='image'):
+def create_roi(input_img, export_filename, window_name='image'):
     # Crear imagen y ventana y vincular ventana a función de devolución de llamada
     pts = []
-    img = cv2.imread(filename)
-    # img = imutils.resize(img, width=500)
-    img = format_yolov5(img)
+    img = input_img.copy()
     cv2.namedWindow(window_name)
     cv2.setMouseCallback(window_name, draw_roi, (img, pts, window_name))
     print("[INFO] Clic izquierdo: seleccionar puntos, " +
