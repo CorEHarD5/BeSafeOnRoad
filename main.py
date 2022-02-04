@@ -29,7 +29,7 @@ import PySimpleGUI as sg
 from IA import *
 from roi import *
 from roivideo import *
-from trafficLight import *
+# from trafficLight import *
 
 
 def convert_to_bytes(file_or_bytes, resize=None):
@@ -266,13 +266,13 @@ def main():
             print("Button clicked")
             img = values['-FILE LIST-']
             path = values['-FOLDER-'] + '/' + str(img[0])
-            roi_cw = createROI(path)
+            roi_cw = create_roi(path, './temp/ROI_CW.json')
 
         if event == 'Select Traffic Light':
             print("Button clicked")
             img = values['-FILE LIST-']
             path = values['-FOLDER-'] + '/' + str(img[0])
-            roi_tf = createROI_tf(path)
+            roi_tf = create_roi(path, './temp/ROI_TF.json')
 
         if event == 'Detect pedestrians':
             pedestrian_boxes = detect_pedestrians(img_path)

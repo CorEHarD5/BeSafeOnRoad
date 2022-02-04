@@ -82,7 +82,7 @@ def draw_roi(event, x, y, flags, params):
     cv2.imshow('image', img2)
 
 
-def createROI(filename):
+def create_roi(filename, export_filename):
     # Crear imagen y ventana y vincular ventana a función de devolución de llamada
     pts = []
     img = cv2.imread(filename)
@@ -103,7 +103,7 @@ def createROI(filename):
         if key == ord("s"):
             saved_data = {"ROI": pts}
 
-            with open('ROI.json', "w", encoding="utf-8") as file:
+            with open(export_filename, "w", encoding="utf-8") as file:
                 json.dump(saved_data, file, indent=2)
                 print(
                     "[INFO] Las coordenadas de ROI se han guardado localmente")
