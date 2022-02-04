@@ -79,9 +79,8 @@ def load_classes():
         class_list = [cname.strip() for cname in f.readlines()]
     return class_list
 
-def detect_pedestrians(input_img):
+def detect_pedestrians(img):
     net = cv2.dnn.readNet('yolov5s.onnx')
-    img = input_img.copy()
 
     outs = detect(img, net)
     class_ids, confidences, boxes = unwrap_detection(img, outs[0])
@@ -102,12 +101,12 @@ def detect_pedestrians(input_img):
                         (0, 0, 0))
             pedestrians_boxes.append(box)
 
-    while True:
-        cv2.imshow("output", img)
+    # while True:
+    #     cv2.imshow("output", img)
 
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            break
+    #     key = cv2.waitKey(1) & 0xFF
+    #     if key == ord("q"):
+    #         break
 
-    cv2.destroyAllWindows()
-    return pedestrians_boxes
+    # cv2.destroyAllWindows()
+    return pedestrians_boxes, img

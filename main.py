@@ -90,7 +90,11 @@ def main():
         [sg.Text("Choose an image from list on left:")],
         [sg.Text(size=(40, 1), key="-TOUT-")],
         [sg.Image(key="-IMAGE-")],
-        [sg.Button('Start Checking')],
+        [
+            sg.Button('Start Checking'),
+            sg.Text(text="Result: ", auto_size_text=True),
+            sg.Text(auto_size_text=True, key="-WARNING IMAGE-"),
+        ],
     ]
 
     section1 = [[
@@ -184,8 +188,25 @@ def main():
                 # something weird happened making the full filename
 
         if event == 'Start Checking':
-            warn_pedenstrian = process_image(img_path)
+            img = cv2.imread(img_path)
+            img = imutils.resize(img, width=640)
+            row, col, _ = img.shape
+
+            warn_pedenstrian, processed_img = process_image(img)
             print('warn_pedenstrian', warn_pedenstrian)
+            if warn_pedenstrian:
+                window['-WARNING IMAGE-'].update('WARNING!!',
+                                                 text_color='black',
+                                                 background_color='yellow')
+            else:
+                window['-WARNING IMAGE-'].update('No danger detected',
+                                                 text_color='orange',
+                                                 background_color='green')
+
+            resized_img = np.zeros((row, col, 3), np.uint8)
+            resized_img = processed_img[0:row, 0:col]
+            imgbytes = cv2.imencode('.png', resized_img)[1].tobytes()
+            window['-IMAGE-'].update(data=imgbytes)
 
         # Folder name was filled in, make a list of files in the folder
         if event == '-VIDEO FOLDER-':

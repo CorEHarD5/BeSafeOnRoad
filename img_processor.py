@@ -26,14 +26,13 @@ from IA import *
 from roi import *
 from roivideo import *
 
-def process_image(img_path):
+def process_image(img):
     roi_cw = None
     roi_tl = None
     pedestrian_boxes = None
     tl_is_red = None
+    warn_pedenstrian = False
 
-    img = cv2.imread(img_path)
-    img = imutils.resize(img, width=640)
     img = format_yolov5(img)
 
     roi_cw = create_roi(img, './temp/ROI_CW.json', 'Select Crosswalk ROI')
@@ -44,12 +43,15 @@ def process_image(img_path):
     print('tl_is_red', tl_is_red)
 
     if tl_is_red:
-        pedestrian_boxes = detect_pedestrians(img)
+        pedestrian_boxes, img = detect_pedestrians(img)
         print('pedestrian_boxes', pedestrian_boxes)
 
         warn_pedenstrian = check_overlap(roi_cw, pedestrian_boxes)
-        return warn_pedenstrian
-    return False
+
+    img = add_info_to_img(img, roi_cw, color=(0, 255, 0), beta=0.2)
+    img = add_info_to_img(img, roi_tl, color=(255, 0, 0), beta=0.7)
+
+    return warn_pedenstrian, img
 
 def check_light_red(roi_pts_tf, input_img):
     roi_t = list(zip(*roi_pts_tf))
@@ -93,6 +95,24 @@ def check_overlap(roi_cw, pedestrian_boxes):
         if intersection_area > pedestian_box_area * 0.2:
             return True
     return False
+
+
+def add_info_to_img(img, pts, color=(0, 255, 0), beta=0.3):
+
+    mask = np.zeros(img.shape, np.uint8)
+    points = np.array(pts, np.int32)
+    points = points.reshape((-1, 1, 2))
+    # Dibujar polígono
+    mask = cv2.polylines(mask, [points], True, (255, 255, 255), 2)
+    # usado para mostrar la imagen en el escritorio
+    mask2 = cv2.fillPoly(mask.copy(), [points], color)
+
+    show_image = cv2.addWeighted(src1=img,
+                                 src2=mask2,
+                                 alpha=1,
+                                 beta=beta,
+                                 gamma=0)
+    return show_image
 
 
 if __name__ == "__main__":
