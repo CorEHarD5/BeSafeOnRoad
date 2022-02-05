@@ -16,6 +16,8 @@ Use case:
 '''
 
 import base64
+from dis import dis
+from faulthandler import disable
 import imutils
 import io
 import os.path
@@ -28,6 +30,8 @@ from IA import *
 from roi import *
 from roivideo import *
 from img_processor import *
+
+FRAME_RATE = 1
 
 
 def convert_to_bytes(file_or_bytes, resize=None):
@@ -71,6 +75,7 @@ def main():
     roi_cw = None
     roi_tl = None
     video_is_playing = False
+    fps_counter = 0
     cap = None
     net = cv2.dnn.readNet('yolov5n.onnx')
 
@@ -124,23 +129,23 @@ def main():
         ],
     ]
 
-    video_buttons = [[
-        sg.Button('Run Video'),
-        sg.Button('Stop Video'),
-    ]]
-
     video_viewer_column = [
         [sg.Text("Choose an video from list on left:")],
         [sg.Text(size=(40, 1), key="-VIDEO TOUT-")],
         [sg.Image(key="-VIDEO-")],
         [
-            sg.Button('Load Video'),
-            sg.Button('Select ROIs'),
-            sg.Column(video_buttons, key='-VIDEO BUTTONS-', visible=False)
+            sg.Button('Load/Reload Video', disabled=True),
+            sg.Button('Select ROIs', disabled=True),
+            sg.Button('Play/Pause Video', disabled=True),
+            sg.Button('Stop Video', disabled=True),
+        ],
+        [
+            sg.Text(text="Frame Rate: ", auto_size_text=True),
+            sg.Slider(range=(1, 30), default_value=10, resolution=1, orientation='h', size=(40, 15), key='-FRAME RATE SLIDER-', disabled=True)
         ],
         [
             sg.Text(text="Result: ", auto_size_text=True),
-            sg.Text(auto_size_text=True, key="-WARNING VIDEO-"),
+            sg.Text(auto_size_text=True, key="-VIDEO WARNING-"),
         ],
     ]
 
@@ -177,6 +182,8 @@ def main():
         # print(event, values)
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
+
+        FRAMERATE = values['-FRAME RATE SLIDER-']
 
         # Folder name was filled in, make a list of files in the folder
         if event == '-FOLDER-':
@@ -245,10 +252,24 @@ def main():
                 video_path = os.path.join(values['-VIDEO FOLDER-'],
                                         values['-FILE VIDEO LIST-'][0])
                 window['-VIDEO TOUT-'].update(video_path)
-                window['-VIDEO BUTTONS-'].update(visible=False)
+                window['-VIDEO-'].update(source=None)
+                window['Load/Reload Video'].update(disabled=False)
+                window['Select ROIs'].update(disabled=True)
+                window['Play/Pause Video'].update(disabled=True)
+                window['Stop Video'].update(disabled=True)
+                window['-FRAME RATE SLIDER-'].update(disabled=True)
+                window['-VIDEO WARNING-'].update('',
+                                                 text_color=None,
+                                                 background_color=None)
             except Exception as err:
                 # something weird happened making the full filename
                 print(f'** Error {err} **')
+
+        if event == 'Load/Reload Video':
+            video_is_playing = False
+            cap = cv2.VideoCapture(video_path)
+            fps_counter = 0
+            window['Select ROIs'].update(disabled=False)
 
         if event == 'Select ROIs':
             if cap.isOpened():
@@ -265,17 +286,20 @@ def main():
                     resized_frame = frame[0:row, 0:col]
                     imgbytes = cv2.imencode('.png', resized_frame)[1].tobytes()
                     window['-VIDEO-'].update(data=imgbytes)
-                    window['-VIDEO BUTTONS-'].update(visible=True)
+                    window['Play/Pause Video'].update(disabled=False)
+                    window['Stop Video'].update(disabled=False)
+                    window['-FRAME RATE SLIDER-'].update(disabled=False)
 
-        if event == 'Load Video':
-            video_is_playing = False
-            cap = cv2.VideoCapture(video_path)
-
-        if event == 'Run Video':
-            video_is_playing = True
+        if event == 'Play/Pause Video':
+            video_is_playing = not video_is_playing
+            window['Stop Video'].update(disabled=False)
 
         if event == 'Stop Video':
             video_is_playing = False
+            window['Select ROIs'].update(disabled=True)
+            window['Play/Pause Video'].update(disabled=True)
+            window['Stop Video'].update(disabled=True)
+            window['-FRAME RATE SLIDER-'].update(disabled=True)
             cap.release()
 
         if video_is_playing == True:
@@ -289,28 +313,30 @@ def main():
                         print("Can't receive frame (stream end?). Exiting ...")
                         video_is_playing = False
                     else:
-                        frame = imutils.resize(frame, width=IMAGE_QUALITY)
-                        row, col, _ = frame.shape
-                        warn_pedenstrian, frame = process_image(frame, net, roi_cw, roi_tl)
+                        if fps_counter % FRAMERATE == 0:
+                            print(fps_counter)
+                            frame = imutils.resize(frame, width=IMAGE_QUALITY)
+                            row, col, _ = frame.shape
+                            warn_pedenstrian, frame = process_image(frame, net, roi_cw, roi_tl)
 
-                        if warn_pedenstrian:
-                            window['-WARNING VIDEO-'].update('WARNING!!',
-                                                             text_color='black',
-                                                             background_color='yellow')
-                        else:
-                            window['-WARNING VIDEO-'].update('No danger detected',
-                                                             text_color='orange',
-                                                             background_color='green')
+                            if warn_pedenstrian:
+                                window['-VIDEO WARNING-'].update('WARNING!!',
+                                                                text_color='black',
+                                                                background_color='yellow')
+                            else:
+                                window['-VIDEO WARNING-'].update('No danger detected',
+                                                                text_color='orange',
+                                                                background_color='green')
 
-                        resized_frame = np.zeros((row, col, 3), np.uint8)
-                        resized_frame = frame[0:row, 0:col]
-                        imgbytes = cv2.imencode('.png', resized_frame)[1].tobytes()
-                        window['-VIDEO-'].update(data=imgbytes)
-                        window['-VIDEO BUTTONS-'].update(visible=True)
+                            resized_frame = np.zeros((row, col, 3), np.uint8)
+                            resized_frame = frame[0:row, 0:col]
+                            imgbytes = cv2.imencode('.png', resized_frame)[1].tobytes()
+                            window['-VIDEO-'].update(data=imgbytes)
+                        fps_counter += 1
                 else:
                     video_is_playing = False
 
-        if event.startswith('-TOGGLE SEC'):
+        if event.startswith('-TOGGLE SEC'): # TODO CHANGE
             toggle_section = not toggle_section
 
             window['-TOGGLE SEC1-RADIO'].update(toggle_section)
@@ -320,7 +346,8 @@ def main():
             window['-SEC2-'].update(visible=(not toggle_section))
 
     window.close()
-    cap.release()
+    if cap is not None:
+        cap.release()
 
 
 if __name__ == "__main__":
