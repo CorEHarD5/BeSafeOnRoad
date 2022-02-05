@@ -26,25 +26,21 @@ from IA import *
 from roi import *
 from roivideo import *
 
-def process_image(img):
-    roi_cw = None
-    roi_tl = None
+def process_image(img, roi_cw = None, roi_tl = None):
     pedestrian_boxes = None
     tl_is_red = None
     warn_pedenstrian = False
-
     img = format_yolov5(img)
 
-    roi_cw = create_roi(img, './temp/ROI_CW.json', 'Select Crosswalk ROI')
-    print('roi_cw', roi_cw)
-    roi_tl = create_roi(img, './temp/ROI_TL.json', 'Select Traffic Light ROI')
-    print('roi_tl', roi_tl)
+    if roi_cw is None or roi_tl is None:
+        roi_cw, roi_tl = create_rois(img)
+
     tl_is_red = check_light_red(roi_tl, img)
-    print('tl_is_red', tl_is_red)
+    # print('tl_is_red', tl_is_red)
 
     if tl_is_red:
         pedestrian_boxes, img = detect_pedestrians(img)
-        print('pedestrian_boxes', pedestrian_boxes)
+        # print('pedestrian_boxes', pedestrian_boxes)
 
         warn_pedenstrian = check_overlap(roi_cw, pedestrian_boxes)
 
@@ -52,6 +48,16 @@ def process_image(img):
     img = add_info_to_img(img, roi_tl, color=(255, 0, 0), beta=0.7)
 
     return warn_pedenstrian, img
+
+
+def create_rois(img):
+    roi_cw = create_roi(img, './temp/ROI_CW.json', 'Select Crosswalk ROI')
+    # print('roi_cw', roi_cw)
+    roi_tl = create_roi(img, './temp/ROI_TL.json', 'Select Traffic Light ROI')
+    # print('roi_tl', roi_tl)
+
+    return roi_cw, roi_tl
+
 
 def check_light_red(roi_pts_tf, input_img):
     roi_t = list(zip(*roi_pts_tf))

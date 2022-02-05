@@ -3,6 +3,8 @@ from operator import index
 import cv2
 import numpy as np
 
+IMAGE_QUALITY = 640
+
 
 def format_yolov5(frame):
     # put the image in square big enough
@@ -16,7 +18,7 @@ def format_yolov5(frame):
 def detect(image, net):
     # resize to 640x640, normalize to [0,1[ and swap Red and Blue channels
     blob = cv2.dnn.blobFromImage(image,
-                                 1 / 255.0, (640, 640),
+                                 1 / 255.0, (IMAGE_QUALITY, IMAGE_QUALITY),
                                  swapRB=True,
                                  crop=False)
     net.setInput(blob)
@@ -33,8 +35,8 @@ def unwrap_detection(input_image, output_data):
 
     image_width, image_height, _ = input_image.shape
 
-    x_factor = image_width / 640
-    y_factor = image_height / 640
+    x_factor = image_width / IMAGE_QUALITY
+    y_factor = image_height / IMAGE_QUALITY
 
     for r in range(rows):
         row = output_data[r]

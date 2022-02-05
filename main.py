@@ -16,6 +16,7 @@ Use case:
 '''
 
 import base64
+import imutils
 import io
 import os.path
 
@@ -66,6 +67,11 @@ def convert_to_bytes(file_or_bytes, resize=None):
 def main():
     toggle_section = True
     img_path = None
+    video_path = None
+    roi_cw = None
+    roi_tl = None
+    video_is_playing = False
+    cap = None
 
     file_list_column = [
         [
@@ -81,8 +87,8 @@ def main():
         ],
         [
             sg.Text('Resize to'),
-            sg.In(default_text=640, key='-W-', size=(5, 1)),
-            sg.In(default_text=640, key='-H-', size=(5, 1))
+            sg.In(default_text=IMAGE_QUALITY, key='-W-', size=(5, 1)),
+            sg.In(default_text=IMAGE_QUALITY, key='-H-', size=(5, 1))
         ],
     ]
 
@@ -117,11 +123,24 @@ def main():
         ],
     ]
 
+    video_buttons = [[
+        sg.Button('Run Video'),
+        sg.Button('Stop Video'),
+    ]]
+
     video_viewer_column = [
         [sg.Text("Choose an video from list on left:")],
         [sg.Text(size=(40, 1), key="-VIDEO TOUT-")],
         [sg.Image(key="-VIDEO-")],
-        [sg.Button('Run Video')],
+        [
+            sg.Button('Load Video'),
+            sg.Button('Select ROIs'),
+            sg.Column(video_buttons, key='-VIDEO BUTTONS-', visible=False)
+        ],
+        [
+            sg.Text(text="Result: ", auto_size_text=True),
+            sg.Text(auto_size_text=True, key="-WARNING VIDEO-"),
+        ],
     ]
 
     section2 = [[
@@ -153,8 +172,8 @@ def main():
     window = sg.Window('BeSafeOnRoad', layout)
 
     while True:  # Event Loop
-        event, values = window.read()
-        print(event, values)
+        event, values = window.read(timeout=1)
+        # print(event, values)
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
 
@@ -189,7 +208,7 @@ def main():
 
         if event == 'Start Checking':
             img = cv2.imread(img_path)
-            img = imutils.resize(img, width=640)
+            img = imutils.resize(img, width=IMAGE_QUALITY)
             row, col, _ = img.shape
 
             warn_pedenstrian, processed_img = process_image(img)
@@ -222,21 +241,73 @@ def main():
             window['-FILE VIDEO LIST-'].update(fnames)
         elif event == '-FILE VIDEO LIST-':  # A file was chosen from the listbox
             try:
-                img_path = os.path.join(values['-VIDEO FOLDER-'],
+                video_path = os.path.join(values['-VIDEO FOLDER-'],
                                         values['-FILE VIDEO LIST-'][0])
-                window['-VIDEO TOUT-'].update(img_path)
-                window['-VIDEO-'].update(
-                    data=convert_to_bytes(img_path, resize=new_size))
+                window['-VIDEO TOUT-'].update(video_path)
+                window['-VIDEO BUTTONS-'].update(visible=False)
             except Exception as err:
                 # something weird happened making the full filename
                 print(f'** Error {err} **')
 
+        if event == 'Select ROIs':
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    video_is_playing = False
+                else:
+                    frame = imutils.resize(frame, width=IMAGE_QUALITY)
+                    row, col, _ = frame.shape
+                    roi_cw, roi_tl = create_rois(frame)
+
+                    resized_frame = np.zeros((row, col, 3), np.uint8)
+                    resized_frame = frame[0:row, 0:col]
+                    imgbytes = cv2.imencode('.png', resized_frame)[1].tobytes()
+                    window['-VIDEO-'].update(data=imgbytes)
+                    window['-VIDEO BUTTONS-'].update(visible=True)
+
+        if event == 'Load Video':
+            video_is_playing = False
+            cap = cv2.VideoCapture(video_path)
+
         if event == 'Run Video':
-            print("Button clicked")
-            img = values['-FILE VIDEO LIST-']
-            video_path = values['-VIDEO FOLDER-'] + '/' + str(img[0])
-            print(video_path)
-            videoPlay(video_path)
+            video_is_playing = True
+
+        if event == 'Stop Video':
+            video_is_playing = False
+            cap.release()
+
+        if video_is_playing == True:
+            if roi_cw is None or roi_tl is None:
+                print('Error: rois not defined.')
+                video_is_playing = False
+            else:
+                if cap.isOpened():
+                    ret, frame = cap.read()
+                    if not ret:
+                        print("Can't receive frame (stream end?). Exiting ...")
+                        video_is_playing = False
+                    else:
+                        frame = imutils.resize(frame, width=IMAGE_QUALITY)
+                        row, col, _ = frame.shape
+                        warn_pedenstrian, frame = process_image(frame, roi_cw, roi_tl)
+
+                        if warn_pedenstrian:
+                            window['-WARNING VIDEO-'].update('WARNING!!',
+                                                             text_color='black',
+                                                             background_color='yellow')
+                        else:
+                            window['-WARNING VIDEO-'].update('No danger detected',
+                                                             text_color='orange',
+                                                             background_color='green')
+
+                        resized_frame = np.zeros((row, col, 3), np.uint8)
+                        resized_frame = frame[0:row, 0:col]
+                        imgbytes = cv2.imencode('.png', resized_frame)[1].tobytes()
+                        window['-VIDEO-'].update(data=imgbytes)
+                        window['-VIDEO BUTTONS-'].update(visible=True)
+                else:
+                    video_is_playing = False
 
         if event.startswith('-TOGGLE SEC'):
             toggle_section = not toggle_section
@@ -248,6 +319,7 @@ def main():
             window['-SEC2-'].update(visible=(not toggle_section))
 
     window.close()
+    cap.release()
 
 
 if __name__ == "__main__":
