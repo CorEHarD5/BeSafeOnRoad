@@ -72,6 +72,7 @@ def main():
     roi_tl = None
     video_is_playing = False
     cap = None
+    net = cv2.dnn.readNet('yolov5n.onnx')
 
     file_list_column = [
         [
@@ -211,7 +212,7 @@ def main():
             img = imutils.resize(img, width=IMAGE_QUALITY)
             row, col, _ = img.shape
 
-            warn_pedenstrian, processed_img = process_image(img)
+            warn_pedenstrian, processed_img = process_image(img, net)
             print('warn_pedenstrian', warn_pedenstrian)
             if warn_pedenstrian:
                 window['-WARNING IMAGE-'].update('WARNING!!',
@@ -290,7 +291,7 @@ def main():
                     else:
                         frame = imutils.resize(frame, width=IMAGE_QUALITY)
                         row, col, _ = frame.shape
-                        warn_pedenstrian, frame = process_image(frame, roi_cw, roi_tl)
+                        warn_pedenstrian, frame = process_image(frame, net, roi_cw, roi_tl)
 
                         if warn_pedenstrian:
                             window['-WARNING VIDEO-'].update('WARNING!!',

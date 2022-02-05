@@ -26,7 +26,7 @@ from IA import *
 from roi import *
 from roivideo import *
 
-def process_image(img, roi_cw = None, roi_tl = None):
+def process_image(img, net, roi_cw = None, roi_tl = None):
     pedestrian_boxes = None
     tl_is_red = None
     warn_pedenstrian = False
@@ -39,7 +39,7 @@ def process_image(img, roi_cw = None, roi_tl = None):
     # print('tl_is_red', tl_is_red)
 
     if tl_is_red:
-        pedestrian_boxes, img = detect_pedestrians(img)
+        pedestrian_boxes, img = detect_pedestrians(img, net)
         # print('pedestrian_boxes', pedestrian_boxes)
 
         warn_pedenstrian = check_overlap(roi_cw, pedestrian_boxes)

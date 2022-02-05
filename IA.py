@@ -81,8 +81,8 @@ def load_classes():
         class_list = [cname.strip() for cname in f.readlines()]
     return class_list
 
-def detect_pedestrians(img):
-    net = cv2.dnn.readNet('yolov5s.onnx')
+def detect_pedestrians(img, net):
+    #net = cv2.dnn.readNet('yolov5s.onnx')
 
     outs = detect(img, net)
     class_ids, confidences, boxes = unwrap_detection(img, outs[0])
