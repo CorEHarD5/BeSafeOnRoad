@@ -69,7 +69,6 @@ def convert_to_bytes(file_or_bytes, resize=None):
 
 
 def main():
-    toggle_section = True
     img_path = None
     video_path = None
     roi_cw = None
@@ -90,11 +89,6 @@ def main():
                        enable_events=True,
                        size=(40, 20),
                        key='-FILE LIST-')
-        ],
-        [
-            sg.Text('Resize to'),
-            sg.In(default_text=IMAGE_QUALITY, key='-W-', size=(5, 1)),
-            sg.In(default_text=IMAGE_QUALITY, key='-H-', size=(5, 1))
         ],
     ]
 
@@ -141,7 +135,13 @@ def main():
         ],
         [
             sg.Text(text="Frame Rate: ", auto_size_text=True),
-            sg.Slider(range=(1, 30), default_value=10, resolution=1, orientation='h', size=(40, 15), key='-FRAME RATE SLIDER-', disabled=True)
+            sg.Slider(range=(1, 30),
+                      default_value=10,
+                      resolution=1,
+                      orientation='h',
+                      size=(40, 15),
+                      disabled=True,
+                      key='-FRAME RATE SLIDER-')
         ],
         [
             sg.Text(text="Result: ", auto_size_text=True),
@@ -162,11 +162,11 @@ def main():
                      'Radio',
                      default=True,
                      enable_events=True,
-                     key='-TOGGLE SEC1-RADIO'),
+                     key='-TOGGLE SEC1-RADIO-'),
             sg.Radio(' Video',
                      'Radio',
                      enable_events=True,
-                     key='-TOGGLE SEC2-RADIO')
+                     key='-TOGGLE SEC2-RADIO-')
         ],
         [
             sg.Column(section1, key='-SEC1-'),
@@ -204,12 +204,7 @@ def main():
                 img_path = os.path.join(values['-FOLDER-'],
                                         values['-FILE LIST-'][0])
                 window['-TOUT-'].update(img_path)
-                if values['-W-'] and values['-H-']:
-                    new_size = int(values['-W-']), int(values['-H-'])
-                else:
-                    new_size = None
-                window['-IMAGE-'].update(
-                    data=convert_to_bytes(img_path, resize=new_size))
+                window['-IMAGE-'].update(data=convert_to_bytes(img_path, resize=(IMAGE_QUALITY, IMAGE_QUALITY)))
             except Exception as err:
                 print(f'** Error {err} **')
                 # something weird happened making the full filename
@@ -336,14 +331,9 @@ def main():
                 else:
                     video_is_playing = False
 
-        if event.startswith('-TOGGLE SEC'): # TODO CHANGE
-            toggle_section = not toggle_section
-
-            window['-TOGGLE SEC1-RADIO'].update(toggle_section)
-            window['-TOGGLE SEC2-RADIO'].update(not toggle_section)
-
-            window['-SEC1-'].update(visible=toggle_section)
-            window['-SEC2-'].update(visible=(not toggle_section))
+        if event.startswith('-TOGGLE SEC'):
+            window['-SEC1-'].update(visible=values['-TOGGLE SEC1-RADIO-'])
+            window['-SEC2-'].update(visible=values['-TOGGLE SEC2-RADIO-'])
 
     window.close()
     if cap is not None:
