@@ -10,23 +10,20 @@ Since: Winter 2021
 College: University of La Laguna
 Computer Science - Intelligent Sistems
 Description: Todo
-
-Use case:
-    Todo
 '''
-
 
 import itertools
 import cv2
 import numpy as np
-import PySimpleGUI as sg
 from shapely.geometry import Polygon
 
-from IA import *
-from roi import *
-from roivideo import *
+from ia import format_yolov5, detect_pedestrians
+from roi import create_roi
 
-def process_image(img, net, roi_cw = None, roi_tl = None):
+
+def process_image(img, net, roi_cw=None, roi_tl=None):
+    '''Function to process an image to get if a pedestrian is crossing the
+    street while the traffic light is red.'''
     pedestrian_boxes = None
     tl_is_red = None
     warn_pedenstrian = False
@@ -51,6 +48,8 @@ def process_image(img, net, roi_cw = None, roi_tl = None):
 
 
 def create_rois(img):
+    '''Function to select the region of interest where the crosswalk and the
+    traffic lights are on the image.'''
     roi_cw = create_roi(img, './temp/ROI_CW.json', 'Select Crosswalk ROI')
     # print('roi_cw', roi_cw)
     roi_tl = create_roi(img, './temp/ROI_TL.json', 'Select Traffic Light ROI')
@@ -60,6 +59,7 @@ def create_rois(img):
 
 
 def check_light_red(roi_pts_tf, input_img):
+    '''Function to check if a traffic light is on red for the pedestrians.'''
     roi_t = list(zip(*roi_pts_tf))
     img = input_img.copy()
 
@@ -85,17 +85,21 @@ def check_light_red(roi_pts_tf, input_img):
 
 
 def check_overlap(roi_cw, pedestrian_boxes):
+    '''Function to check if the crosswalk's region of interest overlaps with any
+    of the pedestrian's bounding boxes.'''
     crosswalk_poligon = Polygon(roi_cw)
 
     for pedestrian_box in pedestrian_boxes:
         pedestrian_box_vertex = [
             (pedestrian_box[0], pedestrian_box[1]),
             (pedestrian_box[0] + pedestrian_box[2], pedestrian_box[1]),
-            (pedestrian_box[0] + pedestrian_box[2], pedestrian_box[1] + pedestrian_box[3]),
+            (pedestrian_box[0] + pedestrian_box[2],
+             pedestrian_box[1] + pedestrian_box[3]),
             (pedestrian_box[0], pedestrian_box[1] + pedestrian_box[3]),
         ]
         pedestrian_poligon = Polygon(pedestrian_box_vertex)
-        intersection_area = crosswalk_poligon.intersection(pedestrian_poligon).area
+        intersection_area = crosswalk_poligon.intersection(
+            pedestrian_poligon).area
         pedestian_box_area = pedestrian_box[2] * pedestrian_box[3]
 
         if intersection_area > pedestian_box_area * 0.2:
@@ -104,7 +108,7 @@ def check_overlap(roi_cw, pedestrian_boxes):
 
 
 def add_info_to_img(img, pts, color=(0, 255, 0), beta=0.3):
-
+    '''Function to add the region of interest poligons to the image.'''
     mask = np.zeros(img.shape, np.uint8)
     points = np.array(pts, np.int32)
     points = points.reshape((-1, 1, 2))
@@ -119,7 +123,3 @@ def add_info_to_img(img, pts, color=(0, 255, 0), beta=0.3):
                                  beta=beta,
                                  gamma=0)
     return show_image
-
-
-if __name__ == "__main__":
-    process_image()

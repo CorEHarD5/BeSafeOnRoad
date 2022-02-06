@@ -16,59 +16,21 @@ Use case:
 '''
 
 import base64
-from dis import dis
-from faulthandler import disable
-import imutils
 import io
 import os.path
 
+import cv2
+import imutils
 import numpy as np
 import PIL.Image
 import PySimpleGUI as sg
 
-from IA import *
-from roi import *
-from roivideo import *
-from img_processor import *
-
-FRAME_RATE = 1
-
-
-def convert_to_bytes(file_or_bytes, resize=None):
-    '''
-    Will convert into bytes and optionally resize an image that is a file or a base64 bytes object.
-    Turns into  PNG format in the process so that can be displayed by tkinter
-    :param file_or_bytes: either a string filename or a bytes base64 image object
-    :type file_or_bytes:  (Union[str, bytes])
-    :param resize:  optional new size
-    :type resize: (Tuple[int, int] or None)
-    :return: (bytes) a byte-string object
-    :rtype: (bytes)
-    '''
-    if isinstance(file_or_bytes, str):
-        img = PIL.Image.open(file_or_bytes)
-    else:
-        try:
-            img = PIL.Image.open(io.BytesIO(base64.b64decode(file_or_bytes)))
-        except Exception as e:
-            data_bytes_io = io.BytesIO(file_or_bytes)
-            img = PIL.Image.open(data_bytes_io)
-
-    cur_width, cur_height = img.size
-    if resize:
-        new_width, new_height = resize
-        scale = min(new_height / cur_height, new_width / cur_width)
-        img = img.resize(
-            (int(cur_width * scale), int(cur_height * scale)),
-            PIL.Image.ANTIALIAS,
-        )
-    with io.BytesIO() as bio:
-        img.save(bio, format="PNG")
-        del img
-        return bio.getvalue()
+from ia import IMAGE_QUALITY
+from img_processor import process_image, create_rois
 
 
 def main():
+    '''Function to start the main gui window of the program.'''
     img_path = None
     video_path = None
     roi_cw = None
@@ -76,7 +38,7 @@ def main():
     video_is_playing = False
     fps_counter = 0
     cap = None
-    net = cv2.dnn.readNet('yolov5n.onnx')
+    net = cv2.dnn.readNet('./models/yolov5n.onnx')
 
     file_list_column = [
         [
@@ -183,14 +145,14 @@ def main():
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
 
-        FRAMERATE = values['-FRAME RATE SLIDER-']
+        frame_rate = values['-FRAME RATE SLIDER-']
 
         # Folder name was filled in, make a list of files in the folder
         if event == '-FOLDER-':
             folder = values['-FOLDER-']
             try:
                 file_list = os.listdir(folder)  # get list of files in folder
-            except:
+            except FileNotFoundError:
                 file_list = []
             fnames = [
                 f for f in file_list
@@ -204,7 +166,8 @@ def main():
                 img_path = os.path.join(values['-FOLDER-'],
                                         values['-FILE LIST-'][0])
                 window['-TOUT-'].update(img_path)
-                window['-IMAGE-'].update(data=convert_to_bytes(img_path, resize=(IMAGE_QUALITY, IMAGE_QUALITY)))
+                window['-IMAGE-'].update(data=convert_to_bytes(
+                    img_path, resize=(IMAGE_QUALITY, IMAGE_QUALITY)))
             except Exception as err:
                 print(f'** Error {err} **')
                 # something weird happened making the full filename
@@ -215,7 +178,6 @@ def main():
             row, col, _ = img.shape
 
             warn_pedenstrian, processed_img = process_image(img, net)
-            print('warn_pedenstrian', warn_pedenstrian)
             if warn_pedenstrian:
                 window['-WARNING IMAGE-'].update('WARNING!!',
                                                  text_color='black',
@@ -235,7 +197,7 @@ def main():
             folder = values['-VIDEO FOLDER-']
             try:
                 file_list = os.listdir(folder)  # get list of files in folder
-            except:
+            except FileNotFoundError:
                 file_list = []
             fnames = [
                 f for f in file_list if os.path.isfile(os.path.join(folder, f))
@@ -245,7 +207,7 @@ def main():
         elif event == '-FILE VIDEO LIST-':  # A file was chosen from the listbox
             try:
                 video_path = os.path.join(values['-VIDEO FOLDER-'],
-                                        values['-FILE VIDEO LIST-'][0])
+                                          values['-FILE VIDEO LIST-'][0])
                 window['-VIDEO TOUT-'].update(video_path)
                 window['-VIDEO-'].update(source=None)
                 window['Load/Reload Video'].update(disabled=False)
@@ -297,7 +259,7 @@ def main():
             window['-FRAME RATE SLIDER-'].update(disabled=True)
             cap.release()
 
-        if video_is_playing == True:
+        if video_is_playing:
             if roi_cw is None or roi_tl is None:
                 print('Error: rois not defined.')
                 video_is_playing = False
@@ -308,24 +270,27 @@ def main():
                         print("Can't receive frame (stream end?). Exiting ...")
                         video_is_playing = False
                     else:
-                        if fps_counter % FRAMERATE == 0:
-                            print(fps_counter)
+                        if fps_counter % frame_rate == 0:
                             frame = imutils.resize(frame, width=IMAGE_QUALITY)
                             row, col, _ = frame.shape
-                            warn_pedenstrian, frame = process_image(frame, net, roi_cw, roi_tl)
+                            warn_pedenstrian, frame = process_image(
+                                frame, net, roi_cw, roi_tl)
 
                             if warn_pedenstrian:
-                                window['-VIDEO WARNING-'].update('WARNING!!',
-                                                                text_color='black',
-                                                                background_color='yellow')
+                                window['-VIDEO WARNING-'].update(
+                                    'WARNING!!',
+                                    text_color='black',
+                                    background_color='yellow')
                             else:
-                                window['-VIDEO WARNING-'].update('No danger detected',
-                                                                text_color='orange',
-                                                                background_color='green')
+                                window['-VIDEO WARNING-'].update(
+                                    'No danger detected',
+                                    text_color='orange',
+                                    background_color='green')
 
                             resized_frame = np.zeros((row, col, 3), np.uint8)
                             resized_frame = frame[0:row, 0:col]
-                            imgbytes = cv2.imencode('.png', resized_frame)[1].tobytes()
+                            imgbytes = cv2.imencode('.png',
+                                                    resized_frame)[1].tobytes()
                             window['-VIDEO-'].update(data=imgbytes)
                         fps_counter += 1
                 else:
@@ -338,6 +303,40 @@ def main():
     window.close()
     if cap is not None:
         cap.release()
+
+
+def convert_to_bytes(file_or_bytes, resize=None):
+    '''
+    Will convert into bytes and optionally resize an image that is a file or a base64 bytes object.
+    Turns into  PNG format in the process so that can be displayed by tkinter
+    :param file_or_bytes: either a string filename or a bytes base64 image object
+    :type file_or_bytes:  (Union[str, bytes])
+    :param resize:  optional new size
+    :type resize: (Tuple[int, int] or None)
+    :return: (bytes) a byte-string object
+    :rtype: (bytes)
+    '''
+    if isinstance(file_or_bytes, str):
+        img = PIL.Image.open(file_or_bytes)
+    else:
+        try:
+            img = PIL.Image.open(io.BytesIO(base64.b64decode(file_or_bytes)))
+        except Exception as _:
+            data_bytes_io = io.BytesIO(file_or_bytes)
+            img = PIL.Image.open(data_bytes_io)
+
+    cur_width, cur_height = img.size
+    if resize:
+        new_width, new_height = resize
+        scale = min(new_height / cur_height, new_width / cur_width)
+        img = img.resize(
+            (int(cur_width * scale), int(cur_height * scale)),
+            PIL.Image.ANTIALIAS,
+        )
+    with io.BytesIO() as bio:
+        img.save(bio, format="PNG")
+        del img
+        return bio.getvalue()
 
 
 if __name__ == "__main__":
