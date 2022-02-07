@@ -15,6 +15,7 @@ Description: This script implements some methods to select the regions of
 import json
 
 import cv2
+import numpy as np
 
 pts = []  # list of selected region of interest points
 
@@ -36,15 +37,57 @@ def create_roi(input_img, export_filename, window_name='image'):
     img = input_img.copy()
     cv2.namedWindow(window_name)
     cv2.setMouseCallback(window_name, draw_roi, (img, pts, window_name))
-    print("[INFO] Left click: select points.")
-    print("[INFO] Right click: delete last selected point.")
-    print("[INFO] Press 'S' to confirm the selected area and save it.")
-    print("[INFO] Press 'ESC' to exit.")
+
+    help_window = np.full((100, 500, 3), 255, np.uint8)
+    cv2.putText(help_window,
+                text="[INFO] Left click: select points.",
+                org=(10, 15),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=0.5,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA)
+    cv2.putText(help_window,
+                text="[INFO] Right click: delete last selected point.",
+                org=(10, 35),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=0.5,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA)
+    cv2.putText(help_window,
+                text="[INFO] Press 'S' to confirm the selected area and save it.",
+                org=(10, 55),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=0.5,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA)
+    cv2.putText(help_window,
+                text="[INFO] Press 'Q' to close this help.",
+                org=(10, 75),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=0.5,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA)
+    cv2.putText(help_window,
+                text="[INFO] Press 'ESC' to exit.",
+                org=(10, 95),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=0.5,
+                color=(0, 0, 0),
+                thickness=1,
+                lineType=cv2.LINE_AA)
+    cv2.imshow('Help', help_window)
 
     while True:
         key = cv2.waitKey(1) & 0xFF
         if key == 27:
             break
+
+        if key == ord("q"):
+            cv2.destroyWindow('Help')
 
         if key == ord("s"):
             saved_data = {"ROI": pts}
