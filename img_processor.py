@@ -6,19 +6,21 @@ Author:
     Sergio de la Barrera García <alu0100953275@ull.edu.es>
     Francisco Jesus Mendes Gomez <alu0101163970@ull.edu.es>
     Sergio Tabares Hernández <alu0101124896@ull.edu.es>
-Since: Winter 2021
-College: University of La Laguna
-Computer Science - Intelligent Sistems
-Description: Todo
+Since: Winter 2021-2022
+College: University of La Laguna - Computer Science - Intelligent Systems
+Description: This script implements main functionalities of the program by using
+    the data obtained by the ROIs and the IA model in order to detect when a
+    pedestrian is crossing the road when the pedestrian traffic light is on red.
 '''
 
 import itertools
+
 import cv2
 import numpy as np
 from shapely.geometry import Polygon
 
 from ia import format_yolov5, detect_pedestrians
-from roi import create_roi
+from roi import create_rois
 
 
 def process_image(img, net, roi_cw=None, roi_tl=None):
@@ -45,17 +47,6 @@ def process_image(img, net, roi_cw=None, roi_tl=None):
     img = add_info_to_img(img, roi_tl, color=(255, 0, 0), beta=0.7)
 
     return warn_pedenstrian, img
-
-
-def create_rois(img):
-    '''Function to select the region of interest where the crosswalk and the
-    traffic lights are on the image.'''
-    roi_cw = create_roi(img, './temp/ROI_CW.json', 'Select Crosswalk ROI')
-    # print('roi_cw', roi_cw)
-    roi_tl = create_roi(img, './temp/ROI_TL.json', 'Select Traffic Light ROI')
-    # print('roi_tl', roi_tl)
-
-    return roi_cw, roi_tl
 
 
 def check_light_red(roi_pts_tf, input_img):

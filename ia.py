@@ -6,10 +6,10 @@ Author:
     Sergio de la Barrera García <alu0100953275@ull.edu.es>
     Francisco Jesus Mendes Gomez <alu0101163970@ull.edu.es>
     Sergio Tabares Hernández <alu0101124896@ull.edu.es>
-Since: Winter 2021
-College: University of La Laguna
-Computer Science - Intelligent Sistems
-Description: Todo
+Since: Winter 2021-2022
+College: University of La Laguna - Computer Science - Intelligent Systems
+Description: This script implements the use of the YOLOv5 model to detect the
+    pedestrians for our program
 '''
 
 import cv2
@@ -27,6 +27,31 @@ def format_yolov5(frame):
     return result
 
 
+def detect_pedestrians(img, net):
+    '''Function to detect the pedestrians and add their bounding boxes to the
+    image.'''
+    results = detect(img, net)
+    class_ids, confidences, boxes = unwrap_detection(img, results[0])
+
+    class_list = ['person']
+    colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
+    pedestrians_boxes = []
+
+    for (classid, confidence, box) in zip(class_ids, confidences, boxes):
+        # YOLOv5 person class id is '0'
+        if classid == 0 and confidence > 0.5:
+            color = colors[int(classid) % len(colors)]
+            cv2.rectangle(img, box, color, 2)
+            cv2.rectangle(img, (box[0], box[1] - 20), (box[0] + box[2], box[1]),
+                          color, -1)
+            cv2.putText(img, f'{class_list[classid]} {confidence}',
+                        (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, .5,
+                        (0, 0, 0))
+            pedestrians_boxes.append(box)
+
+    return pedestrians_boxes, img
+
+
 def detect(image, net):
     '''Function to detect objects on the image.'''
     # resize to 640x640, normalize to [0,1[ and swap Red and Blue channels
@@ -40,7 +65,7 @@ def detect(image, net):
 
 
 def unwrap_detection(input_image, output_data):
-    '''Function to filter the pedestrians and get it's bounding boxes and
+    '''Function to filter the pedestrians and get its bounding boxes and
     detection confidence.'''
     class_ids = []
     confidences = []
@@ -88,28 +113,3 @@ def unwrap_detection(input_image, output_data):
         result_boxes.append(boxes[i])
 
     return result_class_ids, result_confidences, result_boxes
-
-
-def detect_pedestrians(img, net):
-    '''Function to detect the pedestrians and add their bounding boxes to the
-    image.'''
-    results = detect(img, net)
-    class_ids, confidences, boxes = unwrap_detection(img, results[0])
-
-    class_list = ['person']
-    colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
-    pedestrians_boxes = []
-
-    for (classid, confidence, box) in zip(class_ids, confidences, boxes):
-        # YOLOv5 person class id is '0'
-        if classid == 0 and confidence > 0.5:
-            color = colors[int(classid) % len(colors)]
-            cv2.rectangle(img, box, color, 2)
-            cv2.rectangle(img, (box[0], box[1] - 20), (box[0] + box[2], box[1]),
-                          color, -1)
-            cv2.putText(img, f'{class_list[classid]} {confidence}',
-                        (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, .5,
-                        (0, 0, 0))
-            pedestrians_boxes.append(box)
-
-    return pedestrians_boxes, img
