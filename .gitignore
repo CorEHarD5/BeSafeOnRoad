@@ -2,3 +2,4 @@ __pycache__
 *.mkv
 *.mp4
 temp/*
+!temp/.gitkeep
