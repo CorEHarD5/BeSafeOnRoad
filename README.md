@@ -96,7 +96,7 @@ Then it will show you the main window where you can select between several optio
 
 ![select_traffic_light](./readme_images/select_traffic_light.jpg)
 
-1. It will show you the processed image and a result text.
+3. It will show you the processed image and a result text.
    
 ![image_result](./readme_images/image_result.jpg)
 
