@@ -10,7 +10,7 @@ Since: Winter 2021-2022
 College: University of La Laguna - Computer Science - Intelligent Systems
 Description: This program implements an Artificial Intelligence system capable
     of detecting pedestrians crossing the road when its traffic light is on red
-    by using the YOLOv5 model, a convolutional neural network, for object
+    by using the YOLOv5 model, a convolutional neural network for object
     detection on images.
 
 Usage:
