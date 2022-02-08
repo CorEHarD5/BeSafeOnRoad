@@ -84,9 +84,8 @@ Then it will show you the main window where you can select between several optio
 ![selected_image](./readme_images/selected_image.jpg)
 ![start_checking](./readme_images/start_checking.jpg)
 
-3. Then you have to select the regions of interest by pushing the 'Select ROIs' button:  
+   - Then you have to select the regions of interest. Instructions to select a ROI:  
 
-Instructions to select a ROI:  
 ![instruction](./readme_images/instruction.jpg)
 
    - In the first pop up window you have to select the crosswalk ROI on the image. Once you have selected the area, press 'S' key to save it.
@@ -97,7 +96,7 @@ Instructions to select a ROI:
 
 ![select_traffic_light](./readme_images/select_traffic_light.jpg)
 
-4. It will show you the processed image and a result text.
+1. It will show you the processed image and a result text.
    
 ![image_result](./readme_images/image_result.jpg)
 
@@ -177,8 +176,8 @@ Instructions to select a ROI:
 4. Finally you can choose the frame rate you want by using the slider, pause the camera execution or stop it completely.
 
 At this stage, you have several options you can choose:
- - Load another video
- - Reload the current video
+ - Load another camera
+ - Reload the current camera
  - Select others ROIs
 
 While executing the program you can end it by pressing the 'Exit' button or by closing the main window. 
